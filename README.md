@@ -19,55 +19,55 @@
 
 Ask things like:
 
-- *"How are my Strike positions doing?"*
-- *"Which markets have the most extreme funding right now?"*
-- *"How much slippage would a $5k ADA market buy take?"*
-- *"Long 500 ADA at 0.21 with a stop at 0.19 and take-profit at 0.25."*
+- _"How are my Strike positions doing?"_
+- _"Which markets have the most extreme funding right now?"_
+- _"How much slippage would a $5k ADA market buy take?"_
+- _"Long 500 ADA at 0.21 with a stop at 0.19 and take-profit at 0.25."_
 
 ## Why
 
-Strike already ships *skills* that help coding assistants **write** Strike integrations. `strike-mcp` is the runtime piece: it lets an agent **use** Strike directly. Every Strike user gets an analyst and a careful trading assistant without writing code, and every agent framework that speaks MCP becomes a new entry point to Strike's order book.
+Strike already ships _skills_ that help coding assistants **write** Strike integrations. `strike-mcp` is the runtime piece: it lets an agent **use** Strike directly. Every Strike user gets an analyst and a careful trading assistant without writing code, and every agent framework that speaks MCP becomes a new entry point to Strike's order book.
 
 Three design choices make it more than an API wrapper:
 
 1. **Answers, not payloads.** Tools return what a trader asks about: spread in bps, USD depth within 0.5/1/2% of mid, book imbalance, funding as APR with who pays whom, distance to liquidation with an ok/watch/danger flag, what each position pays or earns in funding per day, estimated market-order fills.
 2. **Read-only by default, no keys required.** Point it at any Cardano/Ethereum/Solana wallet address and it reads that account's positions and history from Strike's public endpoints. Trading tools don't even exist unless you enable them.
-3. **Guardrails an agent can't skip.** Orders are two-step. `strike_preview_order` validates and prices the order and returns a single-use, short-lived `preview_id`; `strike_place_order` accepts *only* that id, so what the user confirmed is exactly what is sent. See [Safety model](#safety-model).
+3. **Guardrails an agent can't skip.** Orders are two-step. `strike_preview_order` validates and prices the order and returns a single-use, short-lived `preview_id`; `strike_place_order` accepts _only_ that id, so what the user confirmed is exactly what is sent. See [Safety model](#safety-model).
 
 ## Tools
 
 **Market data** (public, no keys)
 
-| Tool | What it answers |
-|---|---|
-| `strike_list_markets` | All markets ranked by volume, 24h move, open interest or funding. Filter by category (Crypto, TradFi…). |
-| `strike_market_snapshot` | One-call brief: price, range, volume, OI, funding (hourly/8h/APR, who pays), mark-vs-index premium, spread and depth. |
-| `strike_get_orderbook` | Top levels plus spread, USD depth bands and imbalance. |
-| `strike_estimate_market_impact` | Simulates a market order by size or USD against the live book: average fill, worst price, slippage in bps. |
-| `strike_get_candles` | OHLCV with change, range, volatility and volume stats. |
-| `strike_get_recent_trades` | Recent prints with taker buy/sell flow and the largest trade. |
-| `strike_get_funding` | Funding for one or all markets, ranked by absolute APR (carry and crowding scan). |
-| `strike_get_sentiment` | Strike's own Fear & Greed index and its components. |
+| Tool                            | What it answers                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `strike_list_markets`           | All markets ranked by volume, 24h move, open interest or funding. Filter by category (Crypto, TradFi…).               |
+| `strike_market_snapshot`        | One-call brief: price, range, volume, OI, funding (hourly/8h/APR, who pays), mark-vs-index premium, spread and depth. |
+| `strike_get_orderbook`          | Top levels plus spread, USD depth bands and imbalance.                                                                |
+| `strike_estimate_market_impact` | Simulates a market order by size or USD against the live book: average fill, worst price, slippage in bps.            |
+| `strike_get_candles`            | OHLCV with change, range, volatility and volume stats.                                                                |
+| `strike_get_recent_trades`      | Recent prints with taker buy/sell flow and the largest trade.                                                         |
+| `strike_get_funding`            | Funding for one or all markets, ranked by absolute APR (carry and crowding scan).                                     |
+| `strike_get_sentiment`          | Strike's own Fear & Greed index and its components.                                                                   |
 
 **Account** (your API wallet, or any public wallet address)
 
-| Tool | What it answers |
-|---|---|
-| `strike_get_account` | Balances, available margin, uPnL, margin ratio, withdrawable, per-market leverage. |
-| `strike_get_positions` | Positions with mark, notional, PnL % of margin, distance to liquidation, risk flag, funding paid/earned per day, plus portfolio totals. |
-| `strike_get_open_orders` | Open and untriggered orders, including brackets and trailing stops. |
-| `strike_get_history` | Orders, fills, funding payments, closed positions or transactions, with date filters and paging. |
-| `strike_get_portfolio` | Realized PnL, volume, fees, fee tier, staked-STRIKE fee discount, account-value curve. |
+| Tool                     | What it answers                                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `strike_get_account`     | Balances, available margin, uPnL, margin ratio, withdrawable, per-market leverage.                                                      |
+| `strike_get_positions`   | Positions with mark, notional, PnL % of margin, distance to liquidation, risk flag, funding paid/earned per day, plus portfolio totals. |
+| `strike_get_open_orders` | Open and untriggered orders, including brackets and trailing stops.                                                                     |
+| `strike_get_history`     | Orders, fills, funding payments, closed positions or transactions, with date filters and paging.                                        |
+| `strike_get_portfolio`   | Realized PnL, volume, fees, fee tier, staked-STRIKE fee discount, account-value curve.                                                  |
 
 **Trading** (only with `STRIKE_ENABLE_TRADING=true`)
 
-| Tool | What it does |
-|---|---|
-| `strike_preview_order` | Validates and prices any order type (limit, market, stop, stop-limit, take-profit, trailing stop), optionally with take-profit/stop-loss brackets. Sends nothing. |
-| `strike_preview_close_position` | Reduce-only market close of all or part of a position, with fill estimate. |
-| `strike_place_order` | Sends a previewed order by `preview_id`. |
-| `strike_cancel_order` / `strike_cancel_all_orders` | Cancel one, or all (requires `confirm: true`). |
-| `strike_set_leverage` | Leverage for new positions in a market. |
+| Tool                                               | What it does                                                                                                                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strike_preview_order`                             | Validates and prices any order type (limit, market, stop, stop-limit, take-profit, trailing stop), optionally with take-profit/stop-loss brackets. Sends nothing. |
+| `strike_preview_close_position`                    | Reduce-only market close of all or part of a position, with fill estimate.                                                                                        |
+| `strike_place_order`                               | Sends a previewed order by `preview_id`.                                                                                                                          |
+| `strike_cancel_order` / `strike_cancel_all_orders` | Cancel one, or all (requires `confirm: true`).                                                                                                                    |
+| `strike_set_leverage`                              | Leverage for new positions in a market.                                                                                                                           |
 
 **Prompts:** `strike_daily_brief` (what's moving, funding extremes, sentiment, your positions) and `strike_risk_check` (stress-test positions against an adverse move).
 
@@ -95,7 +95,7 @@ On top of that, Strike API wallets **cannot withdraw funds**: the worst case is 
 Requires Node.js 20+.
 
 ```bash
-git clone <this repo> strike-mcp && cd strike-mcp
+git clone https://github.com/francbonet/strike-mcp.git && cd strike-mcp
 npm install && npm run build
 ```
 
@@ -103,12 +103,12 @@ npm install && npm run build
 
 Every variable is optional. Set only what the mode you want needs:
 
-| Mode | Variables | What you get |
-|---|---|---|
-| Market data | none | Market data tools only. |
-| Read-only account | `STRIKE_WALLET_ADDRESS` | Plus positions, orders, history and portfolio of that wallet, from Strike's public endpoints. No keys. |
-| API wallet, read-only | `STRIKE_API_PUBLIC_KEY` + `STRIKE_API_PRIVATE_KEY` | Your own account through signed requests. Still no trading tools. |
-| Trading | API wallet + `STRIKE_ENABLE_TRADING=true` | Adds the trading tools. Set `STRIKE_MAX_ORDER_NOTIONAL_USD` to lower the $1,000 per-order cap. |
+| Mode                  | Variables                                          | What you get                                                                                           |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Market data           | none                                               | Market data tools only.                                                                                |
+| Read-only account     | `STRIKE_WALLET_ADDRESS`                            | Plus positions, orders, history and portfolio of that wallet, from Strike's public endpoints. No keys. |
+| API wallet, read-only | `STRIKE_API_PUBLIC_KEY` + `STRIKE_API_PRIVATE_KEY` | Your own account through signed requests. Still no trading tools.                                      |
+| Trading               | API wallet + `STRIKE_ENABLE_TRADING=true`          | Adds the trading tools. Set `STRIKE_MAX_ORDER_NOTIONAL_USD` to lower the $1,000 per-order cap.         |
 
 The two keys go together: set both or neither. To create an API wallet:
 
@@ -234,16 +234,16 @@ Clients run the built `dist/index.js` from that path: after pulling changes, run
 
 ### Configuration
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `STRIKE_NETWORK` | `mainnet` | `testnet` uses `api-v2-testnet.strikefinance.org`. |
-| `STRIKE_WALLET_ADDRESS` | – | Default account for read-only lookups. |
-| `STRIKE_BLOCKCHAIN` | auto | `cardano`, `ethereum` or `solana`, to skip chain detection. |
-| `STRIKE_API_PUBLIC_KEY` / `STRIKE_API_PRIVATE_KEY` | – | API wallet (Ed25519, raw hex). |
-| `STRIKE_ENABLE_TRADING` | `false` | Registers the trading tools. Requires an API wallet. |
-| `STRIKE_MAX_ORDER_NOTIONAL_USD` | `1000` | Per-order notional cap. |
-| `STRIKE_PREVIEW_TTL_SECONDS` | `120` | Preview lifetime. |
-| `STRIKE_API_URL` / `STRIKE_MARKET_URL` | derived | Override base URLs. |
+| Variable                                           | Default   | Purpose                                                     |
+| -------------------------------------------------- | --------- | ----------------------------------------------------------- |
+| `STRIKE_NETWORK`                                   | `mainnet` | `testnet` uses `api-v2-testnet.strikefinance.org`.          |
+| `STRIKE_WALLET_ADDRESS`                            | –         | Default account for read-only lookups.                      |
+| `STRIKE_BLOCKCHAIN`                                | auto      | `cardano`, `ethereum` or `solana`, to skip chain detection. |
+| `STRIKE_API_PUBLIC_KEY` / `STRIKE_API_PRIVATE_KEY` | –         | API wallet (Ed25519, raw hex).                              |
+| `STRIKE_ENABLE_TRADING`                            | `false`   | Registers the trading tools. Requires an API wallet.        |
+| `STRIKE_MAX_ORDER_NOTIONAL_USD`                    | `1000`    | Per-order notional cap.                                     |
+| `STRIKE_PREVIEW_TTL_SECONDS`                       | `120`     | Preview lifetime.                                           |
+| `STRIKE_API_URL` / `STRIKE_MARKET_URL`             | derived   | Override base URLs.                                         |
 
 ## How it works
 
