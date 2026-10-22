@@ -176,6 +176,8 @@ Trading:
 claude mcp add strike -e STRIKE_API_PUBLIC_KEY=... -e STRIKE_API_PRIVATE_KEY=... -e STRIKE_ENABLE_TRADING=true -e STRIKE_MAX_ORDER_NOTIONAL_USD=250 -- node /absolute/path/to/strike-mcp/dist/index.js
 ```
 
+By default `claude mcp add` registers the server only for the directory you run it in (`-s local`). Add `-s user` to make it available in all your projects, or `-s project` to share it through a `.mcp.json` in the repo (don't commit API keys there). Check it with `claude mcp get strike`; the tools appear in new sessions. To change the variables, `claude mcp remove strike -s <scope>` and add it again.
+
 ### Codex
 
 ```bash
@@ -227,6 +229,8 @@ gemini mcp add -s user -e STRIKE_WALLET_ADDRESS=addr1... strike node /absolute/p
 ### Other clients
 
 `strike-mcp` is a stdio server: the client launches it as a subprocess and talks over stdin/stdout, so there is no port or URL. Any MCP client that can run a local server works with command `node`, argument `/absolute/path/to/strike-mcp/dist/index.js`, and the environment variables below.
+
+Clients run the built `dist/index.js` from that path: after pulling changes, run `npm run build` and restart the client; if you move the folder, update the path.
 
 ### Configuration
 
