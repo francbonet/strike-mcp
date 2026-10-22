@@ -99,6 +99,38 @@ git clone <this repo> strike-mcp && cd strike-mcp
 npm install && npm run build
 ```
 
+### Choose a mode
+
+Every variable is optional. Set only what the mode you want needs:
+
+| Mode | Variables | What you get |
+|---|---|---|
+| Market data | none | Market data tools only. |
+| Read-only account | `STRIKE_WALLET_ADDRESS` | Plus positions, orders, history and portfolio of that wallet, from Strike's public endpoints. No keys. |
+| API wallet, read-only | `STRIKE_API_PUBLIC_KEY` + `STRIKE_API_PRIVATE_KEY` | Your own account through signed requests. Still no trading tools. |
+| Trading | API wallet + `STRIKE_ENABLE_TRADING=true` | Adds the trading tools. Set `STRIKE_MAX_ORDER_NOTIONAL_USD` to lower the $1,000 per-order cap. |
+
+The two keys go together: set both or neither. To create an API wallet:
+
+```bash
+node dist/index.js keygen   # prints a new Ed25519 key pair
+```
+
+Register the **public** key at <https://app.strikefinance.org/api-keys>. Try trading on `STRIKE_NETWORK=testnet` first.
+
+### Passing the variables
+
+The server reads its configuration from its own process environment and **does not load `.env` by itself**. Either:
+
+- **put the variables in your client's config**, as in the examples below (`env` block or `-e` flags), or
+- **keep them in a `.env` file** (`cp .env.example .env`) and have Node load it with `--env-file` (Node 20.6+). Your keys then stay in that file instead of the client's config:
+
+  ```bash
+  claude mcp add strike -- node --env-file=/absolute/path/to/strike-mcp/.env /absolute/path/to/strike-mcp/dist/index.js
+  ```
+
+  In JSON configs that is `"args": ["--env-file=/absolute/path/to/strike-mcp/.env", "/absolute/path/to/strike-mcp/dist/index.js"]` with no `env` block. Use absolute paths: clients don't launch the server from the project folder.
+
 Then register it in your client: [Claude Desktop](#claude-desktop) · [Claude Code](#claude-code) · [Codex](#codex) · [Cursor](#cursor) · [VS Code](#vs-code-github-copilot) · [Gemini CLI](#gemini-cli) · [Other clients](#other-clients)
 
 ### Claude Desktop
@@ -119,13 +151,7 @@ Add to `claude_desktop_config.json` (Settings → Developer → Edit config):
 }
 ```
 
-That's read-only with no keys. To see your own account through an API wallet and optionally trade:
-
-```bash
-node dist/index.js keygen   # prints a new Ed25519 key pair
-```
-
-Register the **public** key at <https://app.strikefinance.org/api-keys>, then:
+That's read-only with no keys. For trading, replace the `env` block with:
 
 ```json
 "env": {
@@ -138,8 +164,16 @@ Register the **public** key at <https://app.strikefinance.org/api-keys>, then:
 
 ### Claude Code
 
+Read-only:
+
 ```bash
 claude mcp add strike -e STRIKE_WALLET_ADDRESS=addr1... -- node /absolute/path/to/strike-mcp/dist/index.js
+```
+
+Trading:
+
+```bash
+claude mcp add strike -e STRIKE_API_PUBLIC_KEY=... -e STRIKE_API_PRIVATE_KEY=... -e STRIKE_ENABLE_TRADING=true -e STRIKE_MAX_ORDER_NOTIONAL_USD=250 -- node /absolute/path/to/strike-mcp/dist/index.js
 ```
 
 ### Codex
